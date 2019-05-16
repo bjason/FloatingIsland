@@ -1,0 +1,316 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
+namespace ConcaveHull
+{
+    public class MeshGenerator : MonoBehaviour
+    {
+        public MeshFilter walls;
+        List<Line> wallLines = new List<Line>();
+        List<Vector3> wallVertices = new List<Vector3>();
+        List<int> wallTriangle = new List<int>();
+
+        public class Triangle
+        {
+            public Node[] nodes = new Node[3];
+            public Triangle(Node n1, Node n2, Node n3)
+            {
+                nodes[0] = n1;
+                nodes[1] = n2;
+                nodes[2] = n3;
+            }
+
+            public Node this[int i]
+            {
+                get
+                {
+                    return nodes[i];
+                }
+            }
+        }
+
+        public void drawHorizontalMesh(int height)
+        {
+            List<Vector3> vertices = new List<Vector3>();
+            List<int> triangles = new List<int>();
+
+            vertices.Add(new Vector3(0, 0, 0));
+
+            for (int i = 0; i < Hull.hull_nodes[0].Count - 1; i++)
+            {
+                int startIndex = vertices.Count;
+
+                vertices.Add(Hull.hull_nodes[0][i].getVector());
+                vertices.Add(Hull.hull_nodes[0][i + 1].getVector());
+
+                triangles.Add(0);
+                triangles.Add(startIndex);
+                triangles.Add(startIndex + 1);
+            }
+
+            triangles.Add(vertices.Count - 1);
+            triangles.Add(0);
+            triangles.Add(1);
+
+            int start = vertices.Count;
+            vertices.Add(new Vector3(0, (height - 1) * 50, 0));
+
+            for (int i = 0; i < Hull.hull_nodes[height - 1].Count - 1; i++)
+            {
+                int startIndex = vertices.Count;
+
+                vertices.Add(Hull.hull_nodes[height - 1][i].getVector());
+                vertices.Add(Hull.hull_nodes[height - 1][i + 1].getVector());
+
+                triangles.Add(start);
+                triangles.Add(startIndex + 1);
+                triangles.Add(startIndex);
+            }
+            triangles.Add(vertices.Count - 1);
+            triangles.Add(start);
+            triangles.Add(start + 1);
+
+            Mesh mesh = new Mesh();
+            GetComponent<MeshFilter>().mesh = mesh;
+
+            mesh.vertices = vertices.ToArray();
+            mesh.triangles = triangles.ToArray();
+            mesh.RecalculateNormals();
+        }
+
+        public void drawWallMesh()
+        {
+            for (int i = 0; i < Hull.hull_edges.Count - 1; i++)
+            {
+                List<Node> unusedNodes1 = Hull.hull_nodes[i];
+                unusedNodes1.Add(unusedNodes1[0]);
+                List<Node> unusedNodes2 = Hull.hull_nodes[i + 1];
+                unusedNodes2.Add(unusedNodes2[0]);
+
+                int p1 = 0, p2 = 0;
+                while (p1 < unusedNodes1.Count - 1 && p2 < unusedNodes2.Count - 1)
+                {
+                    int startIndex = wallVertices.Count;
+
+                    wallVertices.Add(unusedNodes1[p1].getVector());
+                    wallVertices.Add(unusedNodes2[p2].getVector());
+
+                    wallTriangle.Add(startIndex);
+                    wallTriangle.Add(startIndex + 1);
+                    wallTriangle.Add(startIndex + 2);
+                    wallTriangle.Add(startIndex);
+                    wallTriangle.Add(startIndex + 2);
+                    wallTriangle.Add(startIndex + 1);
+
+                    // Line edge = new Line(unusedNodes1[p1], unusedNodes2[p2]);
+                    // Line diagnal1 = new Line(unusedNodes1[p1], unusedNodes2[p2 + 1]);
+                    double diagnal1 = Line.getLength(unusedNodes1[p1], unusedNodes2[p2 + 1]);
+                    double diagnal2 = Line.getLength(unusedNodes1[p1 + 1], unusedNodes2[p2]);
+                    if (diagnal1 > diagnal2)
+                    {
+                        wallVertices.Add(unusedNodes2[p2 + 1].getVector());
+                        wallVertices.Add(unusedNodes1[p1 + 1].getVector());
+
+                        wallTriangle.Add(startIndex + 2);
+                        wallTriangle.Add(startIndex + 3);
+                        wallTriangle.Add(startIndex);
+
+                        wallTriangle.Add(startIndex + 3);
+                        wallTriangle.Add(startIndex + 2);
+                        wallTriangle.Add(startIndex);
+                    }
+                    else
+                    {
+                        wallVertices.Add(unusedNodes1[p1 + 1].getVector());
+                        wallVertices.Add(unusedNodes2[p2 + 1].getVector());
+
+                        wallTriangle.Add(startIndex + 2);
+                        wallTriangle.Add(startIndex + 3);
+                        wallTriangle.Add(startIndex + 1);
+
+                        wallTriangle.Add(startIndex + 2);
+                        wallTriangle.Add(startIndex + 1);
+                        wallTriangle.Add(startIndex + 3);
+                    }
+
+                    p1++;
+                    p2++;
+                }
+
+                int l2 = wallVertices.Count - 1;
+                bool flag = true;
+                while (p1 < unusedNodes1.Count)
+                {
+                    wallVertices.Add(unusedNodes1[p1].getVector());
+
+                    wallTriangle.Add(l2);
+                    wallTriangle.Add(wallVertices.Count - 1);
+                    if (flag)
+                    {
+                        wallTriangle.Add(wallVertices.Count - 3);
+                        flag = false;
+
+                        wallTriangle.Add(l2);
+                        wallTriangle.Add(wallVertices.Count - 3);
+                        wallTriangle.Add(wallVertices.Count - 1);
+                    }
+                    else
+                    {
+                        wallTriangle.Add(wallVertices.Count - 2);
+
+                        wallTriangle.Add(l2);
+                        wallTriangle.Add(wallVertices.Count - 2);
+                        wallTriangle.Add(wallVertices.Count - 1);
+                    }
+
+                    p1++;
+                }
+
+                int l1 = wallVertices.Count - 1;
+                flag = true;
+                while (p2 < unusedNodes2.Count)
+                {
+                    // Line line = new Line(unusedNodes1[last1], unusedNodes2[p2]);
+                    // wallLines.Add(line);
+                    wallVertices.Add(unusedNodes2[p2].getVector());
+
+                    wallTriangle.Add(l1);
+                    wallTriangle.Add(wallVertices.Count - 1);
+                    // wallTriangle.Add(wallVertices.Count - 2);
+
+                    if (flag)
+                    {
+                        wallTriangle.Add(wallVertices.Count - 3);
+                        flag = false;
+
+                        wallTriangle.Add(l1);
+                        wallTriangle.Add(wallVertices.Count - 3);
+                        wallTriangle.Add(wallVertices.Count - 1);
+                    }
+                    else
+                    {
+                        wallTriangle.Add(wallVertices.Count - 2);
+
+                        wallTriangle.Add(l1);
+                        wallTriangle.Add(wallVertices.Count - 2);
+                        wallTriangle.Add(wallVertices.Count - 1);
+                    }
+
+                    p2++;
+                }
+            }
+
+            Mesh wallMesh = new Mesh();
+            wallMesh.vertices = wallVertices.ToArray();
+            wallMesh.triangles = wallTriangle.ToArray();
+            walls.mesh = wallMesh;
+        }
+
+        public void drawWall()
+        {
+            for (int i = 0; i < Hull.hull_edges.Count - 1; i++)
+            {
+                // List<Line> edge1 = Hull.hull_edges[i];
+                // List<Line> edge2 = Hull.hull_edges[i + 1];
+                List<Node> unusedNodes1 = Hull.hull_nodes[i];
+                List<Node> unusedNodes2 = Hull.hull_nodes[i + 1];
+
+                // add all node from edge to unusedNodes
+                // foreach (var line in edge1)
+                // {
+                //     if (!unusedNodes1.Contains(line[0])) unusedNodes1.Add(line[0]);
+                //     if (!unusedNodes1.Contains(line[1])) unusedNodes1.Add(line[1]);
+                // }
+                // foreach (var line in edge2)
+                // {
+                //     if (!unusedNodes2.Contains(line[0])) unusedNodes2.Add(line[0]);
+                //     if (!unusedNodes2.Contains(line[1])) unusedNodes2.Add(line[1]);
+                // }
+
+                // connect every pair of nodes together
+                int p1 = 0, p2 = 0;
+                while (p1 < unusedNodes1.Count && p2 < unusedNodes2.Count)
+                {
+                    Line line = new Line(unusedNodes1[p1], unusedNodes2[p2]);
+                    wallLines.Add(line);
+                    p1++;
+                    p2++;
+                }
+
+                int last1 = p1 - 1, last2 = p2 - 1;
+                // connect all rest nodes of one edge to the last node of the other edge
+                while (p1 < unusedNodes1.Count)
+                {
+                    Line line = new Line(unusedNodes1[p1], unusedNodes2[last2]);
+                    wallLines.Add(line);
+                    p1++;
+                }
+
+                while (p2 < unusedNodes2.Count)
+                {
+                    Line line = new Line(unusedNodes1[last1], unusedNodes2[p2]);
+                    wallLines.Add(line);
+                    p2++;
+                }
+
+                if (p1 > p2)
+                    connectBackwards(unusedNodes1, unusedNodes2, ref last1, ref last2);
+                else connectBackwards(unusedNodes2, unusedNodes1, ref last2, ref last1);
+            }
+        }
+
+        private void connectBackwards(List<Node> unusedNodes1, List<Node> unusedNodes2, ref int last1, ref int last2)
+        {
+            int len2 = last2;
+            while (last1 > 0 && last2 > 0)
+            {
+                Line line = new Line(unusedNodes1[last1], unusedNodes2[--last2]);
+                wallLines.Add(line);
+                last1--;
+            }
+            wallLines.Add(new Line(unusedNodes1[0], unusedNodes2[len2]));
+        }
+
+        public void drawWalls()
+        {
+            for (int i = 0; i < Hull.hull_edges.Count - 1; i++)
+            {
+                List<Line> edge1 = Hull.hull_edges[i];
+                List<Line> edge2 = Hull.hull_edges[i + 1];
+                List<Node> unusedNodes1 = new List<Node>();
+                List<Node> unusedNodes2 = new List<Node>();
+
+                // add all node from edge to unusedNodes
+                foreach (var Line in edge1)
+                {
+                    if (!unusedNodes1.Contains(Line[0])) unusedNodes1.Add(Line[0]);
+                    if (!unusedNodes1.Contains(Line[1])) unusedNodes1.Add(Line[1]);
+                }
+                foreach (var Line in edge2)
+                {
+                    if (!unusedNodes1.Contains(Line[0])) unusedNodes1.Add(Line[0]);
+                    if (!unusedNodes1.Contains(Line[1])) unusedNodes1.Add(Line[1]);
+                }
+
+                int p1 = 0, p2 = 0;
+                while (unusedNodes1.Count > 1 || unusedNodes2.Count > 1)
+                {
+                    // get square
+                    Node leftTop = unusedNodes1[p1 + 1];
+                }
+
+                // connect the rest of unused nodes to 
+                while (unusedNodes1.Count == 1)
+                {
+
+                }
+                while (unusedNodes2.Count == 1)
+                {
+
+                }
+            }
+        }
+    }
+}
