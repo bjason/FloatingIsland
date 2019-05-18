@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 namespace ConcaveHull
 {
+    [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     public class MeshGenerator : MonoBehaviour
     {
         public MeshFilter walls;
@@ -84,8 +84,10 @@ namespace ConcaveHull
         {
             for (int i = 0; i < Hull.hull_edges.Count - 1; i++)
             {
+                // lower layer
                 List<Node> unusedNodes1 = Hull.hull_nodes[i];
-                unusedNodes1.Add(unusedNodes1[0]);
+                unusedNodes1.Add(unusedNodes1[0]); // to make the nodes create a circle
+                // upper layer
                 List<Node> unusedNodes2 = Hull.hull_nodes[i + 1];
                 unusedNodes2.Add(unusedNodes2[0]);
 
@@ -94,45 +96,120 @@ namespace ConcaveHull
                 {
                     int startIndex = wallVertices.Count;
 
-                    wallVertices.Add(unusedNodes1[p1].getVector());
-                    wallVertices.Add(unusedNodes2[p2].getVector());
+                    double diagnal1 = Line.getLength(unusedNodes1[p1], unusedNodes2[p2 + 1]); // |
+                    double diagnal2 = Line.getLength(unusedNodes1[p1 + 1], unusedNodes2[p2]); // \
 
-                    wallTriangle.Add(startIndex);
-                    wallTriangle.Add(startIndex + 1);
-                    wallTriangle.Add(startIndex + 2);
-                    wallTriangle.Add(startIndex);
-                    wallTriangle.Add(startIndex + 2);
-                    wallTriangle.Add(startIndex + 1);
-
-                    // Line edge = new Line(unusedNodes1[p1], unusedNodes2[p2]);
-                    // Line diagnal1 = new Line(unusedNodes1[p1], unusedNodes2[p2 + 1]);
-                    double diagnal1 = Line.getLength(unusedNodes1[p1], unusedNodes2[p2 + 1]);
-                    double diagnal2 = Line.getLength(unusedNodes1[p1 + 1], unusedNodes2[p2]);
                     if (diagnal1 > diagnal2)
                     {
-                        wallVertices.Add(unusedNodes2[p2 + 1].getVector());
-                        wallVertices.Add(unusedNodes1[p1 + 1].getVector());
+                        // left two nodes
+                        wallVertices.Add(unusedNodes2[p2].getVector());
+                        wallVertices.Add(unusedNodes1[p1].getVector());
 
-                        wallTriangle.Add(startIndex + 2);
-                        wallTriangle.Add(startIndex + 3);
-                        wallTriangle.Add(startIndex);
+                        double baseEdge = Line.getLength(unusedNodes1[p1], unusedNodes1[p1 + 1]);
+                        double hypotenuse = Line.getLength(unusedNodes1[p1], unusedNodes2[p2 + 1]);
 
-                        wallTriangle.Add(startIndex + 3);
-                        wallTriangle.Add(startIndex + 2);
-                        wallTriangle.Add(startIndex);
+                        // if the shorter diagnal also constructs a obtuse triangle
+                        while ((baseEdge * baseEdge + hypotenuse * hypotenuse < diagnal2 * diagnal2) && p1 < unusedNodes1.Count - 1)
+                        {
+                            p1++;
+                            wallVertices.Add(unusedNodes1[p1].getVector());
+
+                            // add left triangle with two directions
+                            wallTriangle.Add(startIndex);
+                            wallTriangle.Add(wallVertices.Count - 1);
+                            wallTriangle.Add(wallVertices.Count - 2);
+                            wallTriangle.Add(startIndex);
+                            wallTriangle.Add(wallVertices.Count - 2);
+                            wallTriangle.Add(wallVertices.Count - 1);
+
+                            baseEdge = Line.getLength(unusedNodes1[p1], unusedNodes1[p1 + 1]);
+                            hypotenuse = Line.getLength(unusedNodes1[p1], unusedNodes2[p2 + 1]);
+
+                            diagnal1 = Line.getLength(unusedNodes1[p1], unusedNodes2[p2 + 1]); // |
+                            diagnal2 = Line.getLength(unusedNodes1[p1 + 1], unusedNodes2[p2]); // \
+                        }
                     }
                     else
                     {
+                        // left two nodes
+                        wallVertices.Add(unusedNodes1[p1].getVector());
+                        wallVertices.Add(unusedNodes2[p2].getVector());
+
+                        double baseEdge = Line.getLength(unusedNodes2[p2], unusedNodes2[p2 + 1]);
+                        double hypotenuse = Line.getLength(unusedNodes2[p2], unusedNodes1[p1 + 1]);
+
+                        // if the shorter diagnal also constructs a obtuse triangle
+                        while ((baseEdge * baseEdge + hypotenuse * hypotenuse < diagnal1 * diagnal1) && p2 < unusedNodes2.Count - 1)
+                        {
+                            p2++;
+                            wallVertices.Add(unusedNodes2[p2].getVector());
+
+                            // add left triangle with two directions
+                            wallTriangle.Add(startIndex);
+                            wallTriangle.Add(wallVertices.Count - 1);
+                            wallTriangle.Add(wallVertices.Count - 2);
+                            wallTriangle.Add(startIndex);
+                            wallTriangle.Add(wallVertices.Count - 2);
+                            wallTriangle.Add(wallVertices.Count - 1);
+
+                            baseEdge = Line.getLength(unusedNodes2[p2], unusedNodes2[p2 + 1]);
+                            hypotenuse = Line.getLength(unusedNodes2[p2], unusedNodes1[p1 + 1]);
+                            diagnal1 = Line.getLength(unusedNodes1[p1], unusedNodes2[p2 + 1]); // |
+                            diagnal2 = Line.getLength(unusedNodes1[p1 + 1], unusedNodes2[p2]); // \
+                        }
+
+                    }
+
+                    diagnal1 = Line.getLength(unusedNodes1[p1], unusedNodes2[p2 + 1]); // |
+                    diagnal2 = Line.getLength(unusedNodes1[p1 + 1], unusedNodes2[p2]); // \
+
+                    startIndex = wallVertices.Count;
+
+                    // left two nodes
+                    wallVertices.Add(unusedNodes1[p1].getVector());
+                    wallVertices.Add(unusedNodes2[p2].getVector());
+
+                    if (diagnal1 > diagnal2)
+                    {
                         wallVertices.Add(unusedNodes1[p1 + 1].getVector());
                         wallVertices.Add(unusedNodes2[p2 + 1].getVector());
 
+                        // add left triangle with two directions
+                        wallTriangle.Add(startIndex);
+                        wallTriangle.Add(startIndex + 1);
                         wallTriangle.Add(startIndex + 2);
-                        wallTriangle.Add(startIndex + 3);
+                        wallTriangle.Add(startIndex);
+                        wallTriangle.Add(startIndex + 2);
                         wallTriangle.Add(startIndex + 1);
 
+                        // right triangle with 2 directions
+                        wallTriangle.Add(startIndex + 2);
+                        wallTriangle.Add(startIndex + 3);
+                        wallTriangle.Add(startIndex + 1);
                         wallTriangle.Add(startIndex + 2);
                         wallTriangle.Add(startIndex + 1);
                         wallTriangle.Add(startIndex + 3);
+                    }
+                    else
+                    {
+                        wallVertices.Add(unusedNodes2[p2 + 1].getVector());
+                        wallVertices.Add(unusedNodes1[p1 + 1].getVector());
+
+                        // add left triangle with two directions
+                        wallTriangle.Add(startIndex);
+                        wallTriangle.Add(startIndex + 1);
+                        wallTriangle.Add(startIndex + 2);
+                        wallTriangle.Add(startIndex);
+                        wallTriangle.Add(startIndex + 2);
+                        wallTriangle.Add(startIndex + 1);
+
+                        // right triangle with 2 directions
+                        wallTriangle.Add(startIndex + 2);
+                        wallTriangle.Add(startIndex + 3);
+                        wallTriangle.Add(startIndex);
+                        wallTriangle.Add(startIndex + 3);
+                        wallTriangle.Add(startIndex + 2);
+                        wallTriangle.Add(startIndex);
                     }
 
                     p1++;
