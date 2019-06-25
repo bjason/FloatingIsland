@@ -32,7 +32,7 @@ public class NetworkLoader : MonoBehaviour
 
     public void LoadNetwork()
     {
-        Debug.Log("Loading Network: " + networkName);
+        // Debug.Log("Loading Network: " + networkName);
 
         Network n = readFile();
         List<int> removedNodes = new List<int>();

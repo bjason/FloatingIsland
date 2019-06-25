@@ -12,6 +12,7 @@ namespace ConcaveHull
         List<Vector3> wallVertices = new List<Vector3>();
         List<int> wallTriangle = new List<int>();
 
+
         public class Triangle
         {
             public Node[] nodes = new Node[3];
@@ -82,6 +83,8 @@ namespace ConcaveHull
 
         public void drawWallMesh()
         {
+            List<Vector2> uv = new List<Vector2>();
+            
             for (int i = 0; i < Hull.hull_edges.Count - 1; i++)
             {
                 // lower layer
@@ -106,10 +109,10 @@ namespace ConcaveHull
                         wallVertices.Add(unusedNodes1[p1].getVector());
 
                         double baseEdge = Line.getLength(unusedNodes1[p1], unusedNodes1[p1 + 1]);
-                        double hypotenuse = Line.getLength(unusedNodes1[p1], unusedNodes2[p2 + 1]);
+                        double hypotenuse = Line.getLength(unusedNodes1[p1], unusedNodes2[p2]);
 
                         // if the shorter diagnal also constructs a obtuse triangle
-                        while ((baseEdge * baseEdge + hypotenuse * hypotenuse < diagnal2 * diagnal2) && p1 < unusedNodes1.Count - 1)
+                        while ((baseEdge * baseEdge + diagnal2 * diagnal2 > hypotenuse * hypotenuse) && p1 < unusedNodes1.Count - 1)
                         {
                             p1++;
                             wallVertices.Add(unusedNodes1[p1].getVector());
@@ -123,10 +126,9 @@ namespace ConcaveHull
                             wallTriangle.Add(wallVertices.Count - 1);
 
                             baseEdge = Line.getLength(unusedNodes1[p1], unusedNodes1[p1 + 1]);
-                            hypotenuse = Line.getLength(unusedNodes1[p1], unusedNodes2[p2 + 1]);
-
-                            diagnal1 = Line.getLength(unusedNodes1[p1], unusedNodes2[p2 + 1]); // |
-                            diagnal2 = Line.getLength(unusedNodes1[p1 + 1], unusedNodes2[p2]); // \
+                            hypotenuse = Line.getLength(unusedNodes1[p1 + 1], unusedNodes2[p2]);
+                            // diagnal1 = Line.getLength(unusedNodes1[p1], unusedNodes2[p2 + 1]); // |
+                            // diagnal2 = Line.getLength(unusedNodes1[p1 + 1], unusedNodes2[p2]); // \
                         }
                     }
                     else
@@ -136,10 +138,10 @@ namespace ConcaveHull
                         wallVertices.Add(unusedNodes2[p2].getVector());
 
                         double baseEdge = Line.getLength(unusedNodes2[p2], unusedNodes2[p2 + 1]);
-                        double hypotenuse = Line.getLength(unusedNodes2[p2], unusedNodes1[p1 + 1]);
+                        double hypotenuse = Line.getLength(unusedNodes2[p2], unusedNodes1[p1]);
 
                         // if the shorter diagnal also constructs a obtuse triangle
-                        while ((baseEdge * baseEdge + hypotenuse * hypotenuse < diagnal1 * diagnal1) && p2 < unusedNodes2.Count - 1)
+                        while ((baseEdge * baseEdge + diagnal1 * diagnal1 > hypotenuse * hypotenuse) && p2 < unusedNodes2.Count - 1)
                         {
                             p2++;
                             wallVertices.Add(unusedNodes2[p2].getVector());
@@ -153,9 +155,7 @@ namespace ConcaveHull
                             wallTriangle.Add(wallVertices.Count - 1);
 
                             baseEdge = Line.getLength(unusedNodes2[p2], unusedNodes2[p2 + 1]);
-                            hypotenuse = Line.getLength(unusedNodes2[p2], unusedNodes1[p1 + 1]);
-                            diagnal1 = Line.getLength(unusedNodes1[p1], unusedNodes2[p2 + 1]); // |
-                            diagnal2 = Line.getLength(unusedNodes1[p1 + 1], unusedNodes2[p2]); // \
+                            hypotenuse = Line.getLength(unusedNodes2[p2 + 1], unusedNodes1[p1]);
                         }
 
                     }
