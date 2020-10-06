@@ -61,7 +61,8 @@ namespace ConcaveHull
                         ypos = pseudorandom.Next(-widthPerLayera, widthPerLayera);
                     } while (xpos * xpos + ypos * ypos > widthPerLayera * widthPerLayera);
 
-                    Node curr = new Node(xpos, ypos, pseudorandom.Next(-8, 8) + i * 50, index++);
+                    // Node curr = new Node(xpos, ypos, pseudorandom.Next(-8, 8) + i * 50, index++);
+                    Node curr = new Node(xpos, ypos, i * 50, index++);
                     bool alreadyContains = false;
                     dot_list.ForEach(node => alreadyContains = alreadyContains | node.isSame(curr));
 

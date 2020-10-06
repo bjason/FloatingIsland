@@ -8,6 +8,7 @@ namespace ConcaveHull
     public class MeshGenerator : MonoBehaviour
     {
         public MeshFilter walls;
+        public MeshFilter horizontalWall;
         List<Line> wallLines = new List<Line>();
         List<Vector3> wallVertices = new List<Vector3>();
         List<int> wallTriangle = new List<int>();
@@ -74,7 +75,8 @@ namespace ConcaveHull
             triangles.Add(start + 1);
 
             Mesh mesh = new Mesh();
-            GetComponent<MeshFilter>().mesh = mesh;
+            horizontalWall.mesh = mesh;
+            // GetComponent<MeshFilter>().mesh = mesh;
 
             mesh.vertices = vertices.ToArray();
             mesh.triangles = triangles.ToArray();
@@ -84,8 +86,11 @@ namespace ConcaveHull
         public void drawWallMesh()
         {
             List<Vector2> uv = new List<Vector2>();
-            
-            for (int i = 0; i < Hull.hull_edges.Count - 1; i++)
+            List<Vector4> tangents = new List<Vector4>();
+            Vector4 tangent = new Vector4(1f, 0f, 0f, -1f);
+            int numLayer = Hull.hull_edges.Count;
+
+            for (int i = 0; i < numLayer - 1; i++)
             {
                 // lower layer
                 List<Node> unusedNodes1 = Hull.hull_nodes[i];
@@ -106,7 +111,11 @@ namespace ConcaveHull
                     {
                         // left two nodes
                         wallVertices.Add(unusedNodes2[p2].getVector());
+                        uv.Add(new Vector2((float)p2 / unusedNodes2.Count, (float)i / numLayer));
+                        tangents.Add(tangent);
                         wallVertices.Add(unusedNodes1[p1].getVector());
+                        uv.Add(new Vector2((float)p1 / unusedNodes1.Count, (float)i / numLayer));
+                        tangents.Add(tangent);
 
                         double baseEdge = Line.getLength(unusedNodes1[p1], unusedNodes1[p1 + 1]);
                         double hypotenuse = Line.getLength(unusedNodes1[p1], unusedNodes2[p2]);
@@ -115,7 +124,10 @@ namespace ConcaveHull
                         while ((baseEdge * baseEdge + diagnal2 * diagnal2 > hypotenuse * hypotenuse) && p1 < unusedNodes1.Count - 1)
                         {
                             p1++;
+
                             wallVertices.Add(unusedNodes1[p1].getVector());
+                            uv.Add(new Vector2((float)p1 / unusedNodes1.Count, (float)i / numLayer));
+                            tangents.Add(tangent);
 
                             // add left triangle with two directions
                             wallTriangle.Add(startIndex);
@@ -135,7 +147,11 @@ namespace ConcaveHull
                     {
                         // left two nodes
                         wallVertices.Add(unusedNodes1[p1].getVector());
+                        uv.Add(new Vector2((float)p1 / unusedNodes1.Count, (float)i / numLayer));
+                        tangents.Add(tangent);
                         wallVertices.Add(unusedNodes2[p2].getVector());
+                        uv.Add(new Vector2((float)p2 / unusedNodes2.Count, (float)i / numLayer));
+                        tangents.Add(tangent);
 
                         double baseEdge = Line.getLength(unusedNodes2[p2], unusedNodes2[p2 + 1]);
                         double hypotenuse = Line.getLength(unusedNodes2[p2], unusedNodes1[p1]);
@@ -144,7 +160,10 @@ namespace ConcaveHull
                         while ((baseEdge * baseEdge + diagnal1 * diagnal1 > hypotenuse * hypotenuse) && p2 < unusedNodes2.Count - 1)
                         {
                             p2++;
+
                             wallVertices.Add(unusedNodes2[p2].getVector());
+                            uv.Add(new Vector2((float)p2 / unusedNodes2.Count, (float)i / numLayer));
+                            tangents.Add(tangent);
 
                             // add left triangle with two directions
                             wallTriangle.Add(startIndex);
@@ -167,12 +186,20 @@ namespace ConcaveHull
 
                     // left two nodes
                     wallVertices.Add(unusedNodes1[p1].getVector());
+                    uv.Add(new Vector2((float)p1 / unusedNodes1.Count, (float)i / numLayer));
+                    tangents.Add(tangent);
                     wallVertices.Add(unusedNodes2[p2].getVector());
+                    uv.Add(new Vector2((float)p2 / unusedNodes2.Count, (float)i / numLayer));
+                    tangents.Add(tangent);
 
                     if (diagnal1 > diagnal2)
                     {
                         wallVertices.Add(unusedNodes1[p1 + 1].getVector());
+                        uv.Add(new Vector2((float)(p1 + 1) / unusedNodes1.Count, (float)i / numLayer));
+                        tangents.Add(tangent);
                         wallVertices.Add(unusedNodes2[p2 + 1].getVector());
+                        uv.Add(new Vector2((float)(p2 + 1) / unusedNodes2.Count, (float)i / numLayer));
+                        tangents.Add(tangent);
 
                         // add left triangle with two directions
                         wallTriangle.Add(startIndex);
@@ -193,7 +220,11 @@ namespace ConcaveHull
                     else
                     {
                         wallVertices.Add(unusedNodes2[p2 + 1].getVector());
+                        uv.Add(new Vector2((float)(p2 + 1) / unusedNodes2.Count, (float)i / numLayer));
+                        tangents.Add(tangent);
                         wallVertices.Add(unusedNodes1[p1 + 1].getVector());
+                        uv.Add(new Vector2((float)(p1 + 1) / unusedNodes1.Count, (float)i / numLayer));
+                        tangents.Add(tangent);
 
                         // add left triangle with two directions
                         wallTriangle.Add(startIndex);
@@ -216,11 +247,14 @@ namespace ConcaveHull
                     p2++;
                 }
 
+                // the nodes that left, directly connect them with the last node of the other layer
                 int l2 = wallVertices.Count - 1;
                 bool flag = true;
                 while (p1 < unusedNodes1.Count)
                 {
                     wallVertices.Add(unusedNodes1[p1].getVector());
+                    uv.Add(new Vector2((float)p1 / unusedNodes1.Count, (float)i / numLayer));
+                    tangents.Add(tangent);
 
                     wallTriangle.Add(l2);
                     wallTriangle.Add(wallVertices.Count - 1);
@@ -252,6 +286,8 @@ namespace ConcaveHull
                     // Line line = new Line(unusedNodes1[last1], unusedNodes2[p2]);
                     // wallLines.Add(line);
                     wallVertices.Add(unusedNodes2[p2].getVector());
+                    uv.Add(new Vector2((float)p2 / unusedNodes2.Count, (float)i / numLayer));
+                    tangents.Add(tangent);
 
                     wallTriangle.Add(l1);
                     wallTriangle.Add(wallVertices.Count - 1);
@@ -282,6 +318,9 @@ namespace ConcaveHull
             Mesh wallMesh = new Mesh();
             wallMesh.vertices = wallVertices.ToArray();
             wallMesh.triangles = wallTriangle.ToArray();
+            wallMesh.uv = uv.ToArray();
+            wallMesh.tangents = tangents.ToArray();
+
             walls.mesh = wallMesh;
         }
 
